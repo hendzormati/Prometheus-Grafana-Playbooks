@@ -38,8 +38,8 @@ This setup is flexible enough to handle monitoring at the **infrastructure level
 Clone this repository to your local machine:
 
 ```bash
-git clone https://github.com/hendzormati/Prometheus-Grafana-Deployment-Playbooks.git
-cd prometheus-grafana-deployment-Playbooks
+git clone https://github.com/hendzormati/Prometheus-Grafana-Playbooks.git
+cd prometheus-grafana-Playbooks
 ```
 
 ### Step 2: Configure the Inventory
