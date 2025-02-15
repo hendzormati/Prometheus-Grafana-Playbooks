@@ -184,4 +184,4 @@ If you have suggestions or improvements, feel free to create an issue or submit 
 
 ## **License**
 
-This repository is licensed under the MIT License.
+See the LICENSE file for license rights and limitations (MIT).
