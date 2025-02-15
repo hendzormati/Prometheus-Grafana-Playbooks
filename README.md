@@ -21,7 +21,25 @@ This setup is flexible enough to handle monitoring at the **infrastructure level
 - Root privileges on all nodes for package installations and system configuration.
 - Access to the target nodes (control node, storage, compute, and Kubernetes nodes).
 - Prometheus and Grafana will be installed on the **control node**, while **Node Exporter** will be installed on all nodes (whether they are part of an OpenStack setup or Kubernetes nodes).
+## **Required Ports**
+Ensure the following ports are accessible:
+**"Control Node"**
 
+Port 9090 (TCP): Prometheus server
+Port 3000 (TCP): Grafana web interface
+Port 9100 (TCP): Node Exporter (if monitoring the control node itself)
+
+**"All Other Nodes"**
+
+Port 9100 (TCP): Node Exporter
+
+Make sure your firewall rules allow:
+
+Access from your workstation to ports 9090 and 3000 on the control node for web interfaces
+Access from the Prometheus server (control node) to port 9100 on all nodes for metrics collection
+Inter-node communication if using clustered setups
+
+Note: If you're using custom security groups (e.g., in OpenStack) or network policies (in Kubernetes), make sure to update them accordingly to allow these connections.
 ## **Repository Structure**
 
 - **inventory**: Inventory file containing the details of the target nodes (control, storage, compute, Kubernetes master/worker nodes).
@@ -104,7 +122,7 @@ The system uses a `vars.yml` file to maintain the list of agents that Prometheus
 
 1. Edit the `vars.yml` file to update the list of agent IPs:
 ```yaml
-agent_ips:
+prometheus_nodes:
   - 192.168.1.101
   - 192.168.1.102
   - 192.168.1.103
