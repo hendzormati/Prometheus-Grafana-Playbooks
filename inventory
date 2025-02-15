@@ -1,0 +1,10 @@
+[control]
+control ansible_host=192.168.1.159
+[agents]
+agent1 ansible_host=192.168.1.159
+agent2 ansible_host=192.168.1.207
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_extra_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+ansible_ssh_private_key_file=/path/to/ssh-key
+ansible_user=ubuntu
