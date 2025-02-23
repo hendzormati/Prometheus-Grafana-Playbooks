@@ -2,7 +2,18 @@
 # **Prometheus and Grafana Deployment Playbooks**
 
 This repository contains Ansible playbooks for deploying **Prometheus**, **Grafana**, and **Node Exporter** across your infrastructure. The configuration details set up monitoring for your **OpenStack instances**, **Kubernetes nodes**, and **Kubernetes pods**.
+## Repository Traffic Overview
 
+Here's the traffic overview for this repository:
+
+- 👁️ **Total Views** Since Creation: **53** views
+- 🔄 **Total Clones** Since Creation: **12** clones
+
+---
+
+Last traffic data update: **Mon Feb 24 2025 00:27:47 CET**
+
+---
 ## **Overview**
 
 The playbooks in this repository will allow you to:
