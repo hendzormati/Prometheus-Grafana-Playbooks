@@ -1,21 +1,6 @@
 name: Update Profile README with Repo Traffic
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-jobs:
-  update-readme:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-
-    - name: Get repo traffic dataname: Update Profile README with Repo Traffic
-
-on:
   schedule:
     - cron: '0 0 * * *'  # Run once daily at midnight
   workflow_dispatch:      # Keep manual trigger for testing
@@ -77,45 +62,3 @@ jobs:
         author_email: "actions@github.com"
         message: "Update README with latest repo traffic"
         add: "README.md"
-      id: traffic
-      run: |
-        # Fetch traffic data from GitHub API
-        VIEWS=$(curl -s -H "Authorization: token ${{ secrets.PAT_SECRET }}" https://api.github.com/repos/hendzormati/Prometheus-Grafana-Playbooks/traffic/views)
-        CLONES=$(curl -s -H "Authorization: token ${{ secrets.PAT_SECRET }}" https://api.github.com/repos/hendzormati/Prometheus-Grafana-Playbooks/traffic/clones)
-        
-        # Debugging the raw response
-        echo "VIEWS Response: $VIEWS"
-        echo "CLONES Response: $CLONES"
-        
-        # Parse the counts from the API responses
-        VIEWS_COUNT=$(echo $VIEWS | jq '.count')
-        CLONES_COUNT=$(echo $CLONES | jq '.count')
-        
-        # Output the counts for later use in the workflow
-        echo "Views: $VIEWS_COUNT"
-        echo "Clones: $CLONES_COUNT"
-        # Set the output for later use
-        echo "views_count=$VIEWS_COUNT" >> $GITHUB_ENV
-        echo "clones_count=$CLONES_COUNT" >> $GITHUB_ENV
-    - name: Update README with traffic data
-      run: |
-        # Set Tunisia timezone
-        export TZ="Africa/Tunis"
-        
-        # Read the existing README file
-        README_CONTENT=$(cat README.md)
-        
-        # Replace placeholders with actual data
-        UPDATED_README=$(echo "$README_CONTENT" | sed "s/👁️ \*\*Total Views\*\* Since Creation: \*\*.*\*\* views/👁️ \*\*Total Views\*\* Since Creation: \*\*${{ env.views_count }}\*\* views/")
-        UPDATED_README=$(echo "$UPDATED_README" | sed "s/🔄 \*\*Total Clones\*\* Since Creation: \*\*.*\*\* clones/🔄 \*\*Total Clones\*\* Since Creation: \*\*${{ env.clones_count }}\*\* clones/")
-        
-        # Format date to Tunisia's local time
-        UPDATED_README=$(echo "$UPDATED_README" | sed "s/Last traffic data update:.*/Last traffic data update: **$(date +"%a %b %d %Y %T %Z")**/")
-        # Write the updated README back to the file
-        echo "$UPDATED_README" > README.md
-    - name: Commit and push changes
-      uses: EndBug/add-and-commit@v7
-      with:
-        author_name: "GitHub Actions"
-        author_email: "actions@github.com"
-        message: "Update README with latest repo traffic"
