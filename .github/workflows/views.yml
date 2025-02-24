@@ -13,7 +13,70 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - name: Get repo traffic dataname: Update Profile README with Repo Traffic
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run once daily at midnight
+  workflow_dispatch:      # Keep manual trigger for testing
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1    # Shallow clone to minimize impact
+
     - name: Get repo traffic data
+      id: traffic
+      run: |
+        # Get current values from README to compare
+        if [ -f README.md ]; then
+          CURRENT_VIEWS=$(grep -oP '👁️ \*\*Total Views\*\* Since Creation: \*\*\K[0-9]+' README.md || echo "0")
+          CURRENT_CLONES=$(grep -oP '🔄 \*\*Total Clones\*\* Since Creation: \*\*\K[0-9]+' README.md || echo "0")
+        else
+          CURRENT_VIEWS="0"
+          CURRENT_CLONES="0"
+        fi
+        
+        # Fetch traffic data from GitHub API
+        VIEWS=$(curl -s -H "Authorization: token ${{ secrets.PAT_SECRET }}" https://api.github.com/repos/hendzormati/Prometheus-Grafana-Playbooks/traffic/views)
+        CLONES=$(curl -s -H "Authorization: token ${{ secrets.PAT_SECRET }}" https://api.github.com/repos/hendzormati/Prometheus-Grafana-Playbooks/traffic/clones)
+        
+        # Parse the counts
+        VIEWS_COUNT=$(echo $VIEWS | jq '.count')
+        CLONES_COUNT=$(echo $CLONES | jq '.count')
+        
+        # Only proceed if numbers have changed
+        if [ "$VIEWS_COUNT" != "$CURRENT_VIEWS" ] || [ "$CLONES_COUNT" != "$CURRENT_CLONES" ]; then
+          echo "NUMBERS_CHANGED=true" >> $GITHUB_ENV
+        else
+          echo "NUMBERS_CHANGED=false" >> $GITHUB_ENV
+        fi
+        
+        echo "views_count=$VIEWS_COUNT" >> $GITHUB_ENV
+        echo "clones_count=$CLONES_COUNT" >> $GITHUB_ENV
+
+    - name: Update README with traffic data
+      if: env.NUMBERS_CHANGED == 'true'
+      run: |
+        export TZ="Africa/Tunis"
+        README_CONTENT=$(cat README.md)
+        UPDATED_README=$(echo "$README_CONTENT" | sed "s/👁️ \*\*Total Views\*\* Since Creation: \*\*.*\*\* views/👁️ \*\*Total Views\*\* Since Creation: \*\*${{ env.views_count }}\*\* views/")
+        UPDATED_README=$(echo "$UPDATED_README" | sed "s/🔄 \*\*Total Clones\*\* Since Creation: \*\*.*\*\* clones/🔄 \*\*Total Clones\*\* Since Creation: \*\*${{ env.clones_count }}\*\* clones/")
+        UPDATED_README=$(echo "$UPDATED_README" | sed "s/Last traffic data update:.*/Last traffic data update: **$(date +"%a %b %d %Y %T %Z")**/")
+        echo "$UPDATED_README" > README.md
+
+    - name: Commit and push changes
+      if: env.NUMBERS_CHANGED == 'true'
+      uses: EndBug/add-and-commit@v9
+      with:
+        author_name: "GitHub Actions"
+        author_email: "actions@github.com"
+        message: "Update README with latest repo traffic"
+        add: "README.md"
       id: traffic
       run: |
         # Fetch traffic data from GitHub API
