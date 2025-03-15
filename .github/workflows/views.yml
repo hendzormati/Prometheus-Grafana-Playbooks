@@ -17,8 +17,8 @@ jobs:
       run: |
         # Get current values from README to compare
         if [ -f README.md ]; then
-          CURRENT_VIEWS=$(grep -oP '👁️ \*\*Total Views\*\* from the past 14 days: \*\*\K[0-9]+' README.md || echo "0")
-          CURRENT_CLONES=$(grep -oP '🔄 \*\*Total Clones\*\* from the past 14 days: \*\*\K[0-9]+' README.md || echo "0")
+          CURRENT_VIEWS=$(grep -oP '👁️ \*\*Total Views\*\* Since Creation: \*\*\K[0-9]+' README.md || echo "0")
+          CURRENT_CLONES=$(grep -oP '🔄 \*\*Total Clones\*\* Since Creation: \*\*\K[0-9]+' README.md || echo "0")
         else
           CURRENT_VIEWS="0"
           CURRENT_CLONES="0"
