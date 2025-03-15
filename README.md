@@ -6,12 +6,14 @@ This repository contains Ansible playbooks for deploying **Prometheus**, **Grafa
 
 Here's the traffic overview for this repository:
 
-- 👁️ **Total Views** Since Creation: **422** views
-- 🔄 **Total Clones** Since Creation: **63** clones
+- 👁️ **Total Views** Since Creation: **428** views
+- 🔄 **Total Clones** Since Creation: **70** clones
+- 📈 **Recent Views** (Last 14 days): **6** views
+- 📊 **Recent Clones** (Last 14 days): **7** clones
 
 ---
 
-Last traffic data update: **Sat Mar 15 2025 14:44:24 CET**
+Last traffic data update: **Sat Mar 15 2025 15:14:07 CET**
 
 ---
 ## **Overview**
