@@ -1,8 +1,8 @@
 name: Update Profile README with Repo Traffic
-
 on:
+  schedule:
+    - cron: '0 0 * * 0'  # Run once a week at midnight
   workflow_dispatch:      # Keep manual trigger for testing
-
 jobs:
   update-readme:
     runs-on: ubuntu-latest
@@ -11,47 +11,91 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 1    # Shallow clone to minimize impact
-
-    - name: Get repo traffic data
+    
+    - name: Get repo traffic data and update cumulative counts
       id: traffic
       run: |
-        # Get current values from README to compare
+        # Get current values from README for tracking
         if [ -f README.md ]; then
-          CURRENT_VIEWS=$(grep -oP '👁️ \*\*Total Views\*\* Since Creation: \*\*\K[0-9]+' README.md || echo "0")
-          CURRENT_CLONES=$(grep -oP '🔄 \*\*Total Clones\*\* Since Creation: \*\*\K[0-9]+' README.md || echo "0")
+          # Get the current total counts (cumulative)
+          CURRENT_TOTAL_VIEWS=$(grep -oP '👁️ \*\*Total Views\*\* Since Creation: \*\*\K[0-9]+' README.md || echo "0")
+          CURRENT_TOTAL_CLONES=$(grep -oP '🔄 \*\*Total Clones\*\* Since Creation: \*\*\K[0-9]+' README.md || echo "0")
+          
+          # Get the previous 14-day counts to calculate difference
+          LAST_VIEWS_COUNT=$(grep -oP '📈 \*\*Recent Views\*\* \(Last 14 days\): \*\*\K[0-9]+' README.md || echo "0")
+          LAST_CLONES_COUNT=$(grep -oP '📊 \*\*Recent Clones\*\* \(Last 14 days\): \*\*\K[0-9]+' README.md || echo "0")
         else
-          CURRENT_VIEWS="0"
-          CURRENT_CLONES="0"
+          CURRENT_TOTAL_VIEWS="0"
+          CURRENT_TOTAL_CLONES="0"
+          LAST_VIEWS_COUNT="0"
+          LAST_CLONES_COUNT="0"
         fi
         
-        # Fetch traffic data from GitHub API
-        VIEWS=$(curl -s -H "Authorization: token ${{ secrets.PAT_SECRET }}" https://api.github.com/repos/hendzormati/Prometheus-Grafana-Playbooks/traffic/views)
-        CLONES=$(curl -s -H "Authorization: token ${{ secrets.PAT_SECRET }}" https://api.github.com/repos/hendzormati/Prometheus-Grafana-Playbooks/traffic/clones)
+        # Fetch traffic data from GitHub API (last 14 days only)
+        VIEWS_DATA=$(curl -s -H "Authorization: token ${{ secrets.PAT_SECRET }}" https://api.github.com/repos/hendzormati/Prometheus-Grafana-Playbooks/traffic/views)
+        CLONES_DATA=$(curl -s -H "Authorization: token ${{ secrets.PAT_SECRET }}" https://api.github.com/repos/hendzormati/Prometheus-Grafana-Playbooks/traffic/clones)
         
-        # Parse the counts
-        VIEWS_COUNT=$(echo $VIEWS | jq '.count')
-        CLONES_COUNT=$(echo $CLONES | jq '.count')
+        # Parse the counts from the last 14 days
+        NEW_VIEWS_COUNT=$(echo $VIEWS_DATA | jq '.count')
+        NEW_CLONES_COUNT=$(echo $CLONES_DATA | jq '.count')
+        
+        # Calculate the difference from last recorded values to avoid counting twice
+        VIEWS_DIFF=$((NEW_VIEWS_COUNT - LAST_VIEWS_COUNT))
+        CLONES_DIFF=$((NEW_CLONES_COUNT - LAST_CLONES_COUNT))
+        
+        # If difference is positive, add to cumulative totals
+        if [ "$VIEWS_DIFF" -gt 0 ]; then
+          NEW_TOTAL_VIEWS=$((CURRENT_TOTAL_VIEWS + VIEWS_DIFF))
+        else
+          NEW_TOTAL_VIEWS=$CURRENT_TOTAL_VIEWS
+        fi
+        
+        if [ "$CLONES_DIFF" -gt 0 ]; then
+          NEW_TOTAL_CLONES=$((CURRENT_TOTAL_CLONES + CLONES_DIFF))
+        else
+          NEW_TOTAL_CLONES=$CURRENT_TOTAL_CLONES
+        fi
         
         # Only proceed if numbers have changed
-        if [ "$VIEWS_COUNT" != "$CURRENT_VIEWS" ] || [ "$CLONES_COUNT" != "$CURRENT_CLONES" ]; then
+        if [ "$NEW_TOTAL_VIEWS" != "$CURRENT_TOTAL_VIEWS" ] || [ "$NEW_TOTAL_CLONES" != "$CURRENT_TOTAL_CLONES" ] || [ "$NEW_VIEWS_COUNT" != "$LAST_VIEWS_COUNT" ] || [ "$NEW_CLONES_COUNT" != "$LAST_CLONES_COUNT" ]; then
           echo "NUMBERS_CHANGED=true" >> $GITHUB_ENV
         else
           echo "NUMBERS_CHANGED=false" >> $GITHUB_ENV
         fi
         
-        echo "views_count=$VIEWS_COUNT" >> $GITHUB_ENV
-        echo "clones_count=$CLONES_COUNT" >> $GITHUB_ENV
-
+        echo "total_views=$NEW_TOTAL_VIEWS" >> $GITHUB_ENV
+        echo "total_clones=$NEW_TOTAL_CLONES" >> $GITHUB_ENV
+        echo "recent_views=$NEW_VIEWS_COUNT" >> $GITHUB_ENV
+        echo "recent_clones=$NEW_CLONES_COUNT" >> $GITHUB_ENV
+    
     - name: Update README with traffic data
       if: env.NUMBERS_CHANGED == 'true'
       run: |
         export TZ="Africa/Tunis"
         README_CONTENT=$(cat README.md)
-        UPDATED_README=$(echo "$README_CONTENT" | sed "s/👁️ \*\*Total Views\*\* Since Creation: \*\*.*\*\* views/👁️ \*\*Total Views\*\* Since Creation: \*\*${{ env.views_count }}\*\* views/")
-        UPDATED_README=$(echo "$UPDATED_README" | sed "s/🔄 \*\*Total Clones\*\* Since Creation: \*\*.*\*\* clones/🔄 \*\*Total Clones\*\* Since Creation: \*\*${{ env.clones_count }}\*\* clones/")
+        
+        # Update the cumulative totals
+        UPDATED_README=$(echo "$README_CONTENT" | sed "s/👁️ \*\*Total Views\*\* Since Creation: \*\*[0-9]*\*\* views/👁️ \*\*Total Views\*\* Since Creation: \*\*${{ env.total_views }}\*\* views/")
+        UPDATED_README=$(echo "$UPDATED_README" | sed "s/🔄 \*\*Total Clones\*\* Since Creation: \*\*[0-9]*\*\* clones/🔄 \*\*Total Clones\*\* Since Creation: \*\*${{ env.total_clones }}\*\* clones/")
+        
+        # Add or update the recent counts (14 days)
+        if echo "$UPDATED_README" | grep -q "📈 \*\*Recent Views\*\* (Last 14 days):"; then
+          UPDATED_README=$(echo "$UPDATED_README" | sed "s/📈 \*\*Recent Views\*\* (Last 14 days): \*\*[0-9]*\*\* views/📈 \*\*Recent Views\*\* (Last 14 days): \*\*${{ env.recent_views }}\*\* views/")
+        else
+          UPDATED_README=$(echo "$UPDATED_README" | sed "/🔄 \*\*Total Clones\*\* Since Creation:/a \\- 📈 \*\*Recent Views\*\* (Last 14 days): \*\*${{ env.recent_views }}\*\* views")
+        fi
+        
+        if echo "$UPDATED_README" | grep -q "📊 \*\*Recent Clones\*\* (Last 14 days):"; then
+          UPDATED_README=$(echo "$UPDATED_README" | sed "s/📊 \*\*Recent Clones\*\* (Last 14 days): \*\*[0-9]*\*\* clones/📊 \*\*Recent Clones\*\* (Last 14 days): \*\*${{ env.recent_clones }}\*\* clones/")
+        else
+          UPDATED_README=$(echo "$UPDATED_README" | sed "/📈 \*\*Recent Views\*\* (Last 14 days):/a \\- 📊 \*\*Recent Clones\*\* (Last 14 days): \*\*${{ env.recent_clones }}\*\* clones")
+        fi
+        
+        # Update timestamp
         UPDATED_README=$(echo "$UPDATED_README" | sed "s/Last traffic data update:.*/Last traffic data update: **$(date +"%a %b %d %Y %T %Z")**/")
+        
         echo "$UPDATED_README" > README.md
-
+    
     - name: Commit and push changes
       if: env.NUMBERS_CHANGED == 'true'
       uses: EndBug/add-and-commit@v9
